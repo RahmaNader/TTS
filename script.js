@@ -823,32 +823,34 @@ function updateLanguageOptions(selectedLanguage) {
   
   // Add appropriate options based on detected language
   if (selectedLanguage === 'ar') {
-    // Arabic options only
+    // Arabic options only - flag icons only
     const arOptions = [
-      { value: 'ar-SA', label: '🇸🇦 Saudi' },
-      { value: 'ar-EG', label: '🇪🇬 Egyptian' },
+      { value: 'ar-SA', label: '🇸🇦' },
+      { value: 'ar-EG', label: '🇪🇬' },
     ];
     
     arOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
+      opt.title = option.value === 'ar-SA' ? 'Saudi Arabic' : 'Egyptian Arabic';
       accentDropdown.appendChild(opt);
     });
     
     // Default to Saudi Arabic
     accentDropdown.value = 'ar-SA';
   } else {
-    // English options only
+    // English options only - flag icons only
     const enOptions = [
-      { value: 'en-US', label: '🇺🇸 American' },
-      { value: 'en-GB', label: '🇬🇧 British' },
+      { value: 'en-US', label: '🇺🇸' },
+      { value: 'en-GB', label: '🇬🇧' },
     ];
     
     enOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
+      opt.title = option.value === 'en-US' ? 'American English' : 'British English';
       accentDropdown.appendChild(opt);
     });
     
