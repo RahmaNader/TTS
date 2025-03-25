@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TTS Plugin Demo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Hidden form elements that the script uses -->
+  <div style="display: none;">
+    <select id="voiceGender">
+      <option value="male" selected>Male</option>
+      <option value="female">Female</option>
+    </select>
+    <input type="range" id="speed" min="0.5" max="2" value="1" step="0.1">
+  </div>
+
+  <!-- Toggle Button -->
+  <button class="tts-toggle-btn" id="ttsToggle">
+    <i class="fas fa-volume-up"></i>
+  </button>
+
+  <!-- Widget Bar -->
+  <div class="tts-widget">
+    <div class="tts-widget-section controls">
+      <button id="play" title="Play"><i class="fas fa-play"></i></button>
+      <button id="pause" title="Pause"><i class="fas fa-pause"></i></button>
+      <button id="stop" title="Stop"><i class="fas fa-stop"></i></button>
+      <button id="replay" title="Replay"><i class="fas fa-redo-alt"></i></button>
+    </div>
+    
+    <div class="tts-widget-section progress-section">
+      <div class="mini-time">
+        <span id="currentTime">0:00</span>/<span id="totalTime">0:00</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+      </div>
+    </div>
+    
+    <div class="tts-widget-section options">
+      <button id="genderToggle" title="Toggle Voice Gender">
+        <i class="fas fa-male active"></i>
+        <i class="fas fa-female"></i>
+      </button>
+      
+      <div class="speed-control">
+        <button id="speedDown" title="Decrease Speed"><i class="fas fa-minus"></i></button>
+        <span id="speedValue">1.0x</span>
+        <button id="speedUp" title="Increase Speed"><i class="fas fa-plus"></i></button>
+      </div>
+      
+      <select id="accent" title="Language">
+        <option value="en-US">🇺🇸</option>
+        <option value="en-GB">🇬🇧</option>
+        <option value="ar-SA">🇸🇦</option>
+        <option value="ar-EG">🇪🇬</option>
+      </select>
+    </div>
+    
+    <button class="tts-close-btn" id="ttsClose">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="tts-content">
+    <h1>Welcome to Our Website</h1>
+    <p>This is an example of content that can be read by the text-to-speech feature. 
+       The content will be highlighted as it's being read.</p>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.getElementById('ttsToggle').addEventListener('click', () => {
+      document.querySelector('.tts-widget').classList.add('active');
+      document.getElementById('ttsToggle').classList.add('hidden');
+    });
+
+    document.getElementById('ttsClose').addEventListener('click', () => {
+      document.querySelector('.tts-widget').classList.remove('active');
+      document.getElementById('ttsToggle').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
