@@ -92,6 +92,8 @@ body {
   background-color: rgba(255, 220, 70, 0.5);
   padding: 2px 0;
   border-radius: 3px;
+  color: #000; /* Ensure text color is black for better readability */
+  font-weight: bold; /* Make highlighted text bold for better visibility */
 }
 
 /* TTS Toggle Button */
@@ -306,6 +308,8 @@ body {
   background-color: rgba(255, 220, 70, 0.5);
   padding: 2px 0;
   border-radius: 3px;
+  color: #000; /* Ensure text color is black for better readability */
+  font-weight: bold; /* Make highlighted text bold for better visibility */
 }
 
 /* Main Content */

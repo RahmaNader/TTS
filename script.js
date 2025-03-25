@@ -1,4 +1,3 @@
-// Mobile detection and enhanced debugging
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 function debugAudio() {
@@ -14,9 +13,7 @@ function debugAudio() {
   
   console.log("Audio debugging:", debugInfo);
   
-  // On mobile, create a debug overlay for easier troubleshooting
   if (isMobile) {
-    // Create a floating debug button for developers
     const debugBtn = document.createElement('button');
     debugBtn.style.position = 'fixed';
     debugBtn.style.bottom = '80px';
@@ -53,10 +50,8 @@ function showDebugInfo() {
   `);
 }
 
-// Add this check at the beginning of your script
 if (!window.speechSynthesis) {
   console.error("Speech Synthesis API is not available in this browser");
-  // Create a warning element
   document.addEventListener('DOMContentLoaded', function() {
     const warning = document.createElement('div');
     warning.style.padding = "10px";
@@ -67,7 +62,6 @@ if (!window.speechSynthesis) {
     warning.style.borderRadius = "3px";
     warning.innerText = "Your browser doesn't fully support the Speech Synthesis API. Please try Chrome, Edge, or Safari for the best experience.";
     
-    // Insert the warning at the top of the page
     document.body.insertBefore(warning, document.body.firstChild);
   });
 }
@@ -79,7 +73,7 @@ let startTime = 0;
 let totalDuration = 0;
 let currentChar = 0;
 let pauseStartTime = 0;
-let totalPausedTime = 0;  // Track total time spent paused
+let totalPausedTime = 0;
 let isPaused = false;
 let animationId = null;
 let isIntentionallyStopping = false;
@@ -94,7 +88,6 @@ const speed = document.getElementById('speed');
 const voiceStatus = document.createElement('div');
 voiceStatus.className = 'voice-status';
 
-// Create settings container if it doesn't exist
 let settingsContainer = document.querySelector('.settings');
 if (!settingsContainer) {
   settingsContainer = document.createElement('div');
@@ -189,8 +182,6 @@ function updateVoiceAvailabilityStatus() {
     }
   }
   
-  // Updated content selection logic for TTS
-  // Replace all content selections with WordPress selector
 function setSpeech() {
   try {
     const gender = voiceGender.value;
@@ -198,7 +189,6 @@ function setSpeech() {
     
     console.log(`Setting speech with gender: ${gender}, accent: ${selectedAccent}`);
     
-    // Try WordPress content first, then fall back to demo content
     const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
 
     if (!pageContent) {
@@ -207,10 +197,8 @@ function setSpeech() {
       return;
     }
 
-    // Get only the main content, excluding navigation, sidebar, etc.
     let contentToRead = pageContent;
     
-    // Try to find more specific content containers
     const articleContent = pageContent.querySelector('article .entry-content');
     const mainContent = pageContent.querySelector('main');
     const entryContent = pageContent.querySelector('.entry-content');
@@ -230,13 +218,11 @@ function setSpeech() {
       return;
     }
 
-    // Check if speech synthesis is available
     if (!window.speechSynthesis) {
       alert("Your browser doesn't support text-to-speech. Please try Chrome, Edge or Safari.");
       return;
     }
 
-    // Make sure we have voices
     if (!voices || voices.length === 0) {
       console.log("No voices available, trying to load them now");
       loadVoices();
@@ -247,39 +233,30 @@ function setSpeech() {
       }
     }
 
-    // IMPROVED VOICE SELECTION LOGIC
     let selectedVoice = null;
     let fallbackUsed = false;
     
-    // First, try to find perfect match (gender + full accent code)
     if (voicesByAccent[selectedAccent] && voicesByAccent[selectedAccent][gender]?.length > 0) {
       selectedVoice = voicesByAccent[selectedAccent][gender][0];
       console.log(`Found perfect match: ${selectedVoice.name} (${selectedVoice.lang})`);
-    }
-    // If not found, try the base language with correct gender
-    else {
+    } else {
       fallbackUsed = true;
-      const baseCode = selectedAccent.substring(0, 2); // en, ar, etc.
+      const baseCode = selectedAccent.substring(0, 2);
       
       if (voicesByAccent[baseCode] && voicesByAccent[baseCode][gender]?.length > 0) {
         selectedVoice = voicesByAccent[baseCode][gender][0];
         console.log(`Using language fallback with correct gender: ${selectedVoice.name} (${selectedVoice.lang})`);
-      }
-      // If still not found, try opposite gender with correct accent
-      else if (voicesByAccent[selectedAccent]) {
+      } else if (voicesByAccent[selectedAccent]) {
         const oppositeGender = gender === 'male' ? 'female' : 'male';
         
         if (voicesByAccent[selectedAccent][oppositeGender]?.length > 0) {
           selectedVoice = voicesByAccent[selectedAccent][oppositeGender][0];
           console.log(`Using opposite gender (${oppositeGender}) with correct accent: ${selectedVoice.name} (${selectedVoice.lang})`);
-        }
-        // Try "unknown" gender voices for this accent
-        else if (voicesByAccent[selectedAccent].unknown?.length > 0) {
+        } else if (voicesByAccent[selectedAccent].unknown?.length > 0) {
           selectedVoice = voicesByAccent[selectedAccent].unknown[0];
           console.log(`Using "unknown" gender voice with correct accent: ${selectedVoice.name} (${selectedVoice.lang})`);
         }
       }
-      // Last resort - just use any voice
       if (!selectedVoice && voices.length > 0) {
         selectedVoice = voices[0];
         console.log(`Using default voice as last resort: ${selectedVoice.name} (${selectedVoice.lang})`);
@@ -292,7 +269,6 @@ function setSpeech() {
       return;
     }
 
-    // Show UI feedback if fallback was used
     if (fallbackUsed && isMobile) {
       const feedbackEl = document.createElement('div');
       feedbackEl.style.position = 'fixed';
@@ -314,20 +290,18 @@ function setSpeech() {
       }, 3000);
     }
 
-    // Create the speech utterance with the selected voice
     speech = new SpeechSynthesisUtterance();
     speech.voice = selectedVoice;
     speech.rate = parseFloat(speed.value);
-    speech.lang = selectedVoice.lang; // Use the actual voice language, not just our selection
+    speech.lang = selectedVoice.lang;
     speech.text = textToRead;
-    speech.volume = 1.0; // Ensure volume is at maximum
+    speech.volume = 1.0;
 
-    // Store reference to current content element for highlighting
     window.currentContentElement = contentToRead;
 
     speech.onstart = () => {
       console.log("Speech started with voice:", selectedVoice.name);
-      showActiveVoiceInfo(); // Add this line
+      showActiveVoiceInfo();
     };
 
     speech.onboundary = (event) => {
@@ -348,14 +322,13 @@ function setSpeech() {
     speech.onerror = (event) => {
       console.error("Speech error:", event);
       
-      // Ignore all 'interrupted' errors since they're usually intentional actions
       if (event.error !== "interrupted") {
         alert("Error occurred during speech: " + event.error);
       }
     };
 
     calculateReadingTime();
-    debugAudio(); // Log diagnostic info
+    debugAudio();
     
     return true;
   } catch (error) {
@@ -369,25 +342,20 @@ function highlightText(charIndex, element) {
   try {
     if (!element) return;
     
-    // Clear any existing highlight first
     clearHighlight(element);
     
-    // Store original content if not already saved
     if (!element._originalContent) {
       element._originalContent = element.innerHTML;
     }
     
-    // For mobile, use a different approach
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
-      // On mobile, scroll to the highlighted text area
       const textNodes = getTextNodesIn(element);
       let currentLength = 0;
       let targetNode = null;
       let nodeCharIndex = 0;
       
-      // Find the text node containing our target character
       for (let i = 0; i < textNodes.length; i++) {
         let nodeLength = textNodes[i].length;
         if (currentLength + nodeLength > charIndex) {
@@ -399,12 +367,10 @@ function highlightText(charIndex, element) {
       }
       
       if (targetNode && targetNode.parentNode) {
-        // Create a temporary marker to scroll to
         const marker = document.createElement('span');
         marker.className = 'tts-highlight';
         marker.textContent = targetNode.textContent.substring(nodeCharIndex, nodeCharIndex + 10);
         
-        // Replace text node with marker and remaining text
         const beforeText = document.createTextNode(targetNode.textContent.substring(0, nodeCharIndex));
         const afterText = document.createTextNode(targetNode.textContent.substring(nodeCharIndex + 10));
         
@@ -414,11 +380,9 @@ function highlightText(charIndex, element) {
         parentNode.insertBefore(afterText, targetNode);
         parentNode.removeChild(targetNode);
         
-        // Scroll to the marker
         marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } else {
-      // Original implementation for desktop
       const text = element.textContent;
       const before = text.substring(0, charIndex);
       const highlight = text.substring(charIndex, charIndex + 10);
@@ -433,7 +397,6 @@ function highlightText(charIndex, element) {
   }
 }
 
-// Helper function to get all text nodes in an element
 function getTextNodesIn(node) {
   var textNodes = [];
   if (node.nodeType == 3) {
@@ -447,36 +410,29 @@ function getTextNodesIn(node) {
   return textNodes;
 }
 
-// Update the clearHighlight function
 function clearHighlight(element) {
   if (!element) return;
   
-  // Remove all highlight spans
   const highlights = element.querySelectorAll('.tts-highlight');
   highlights.forEach(highlight => {
-    // Replace with text node
     const text = document.createTextNode(highlight.textContent);
     highlight.parentNode.replaceChild(text, highlight);
   });
   
-  // Restore original content if available and needed
   if (element._originalContent && highlights.length === 0) {
     element.innerHTML = element._originalContent;
     delete element._originalContent;
   }
 }
 
-// Replace the calculateReadingTime function with this version:
 function calculateReadingTime() {
   try {
-    // Support both WordPress and demo content
     const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
     if (!pageContent) {
       console.error("No content found for reading time calculation");
       return;
     }
     
-    // Try to find more specific content containers
     const articleContent = pageContent.querySelector('article .entry-content');
     const mainContent = pageContent.querySelector('main');
     const entryContent = pageContent.querySelector('.entry-content');
@@ -499,7 +455,6 @@ function calculateReadingTime() {
     const minutes = Math.floor(totalDuration / 60);
     const seconds = totalDuration % 60;
 
-    // Make sure these elements exist
     const totalTimeElement = document.getElementById('totalTime');
     const currentTimeElement = document.getElementById('currentTime');
     const progressBarElement = document.getElementById('progressBar');
@@ -514,72 +469,62 @@ function calculateReadingTime() {
   }
 }
   
-  function updateProgress() {
-    try {
-      if (!window.speechSynthesis.speaking || isPaused) return;
+function updateProgress() {
+  try {
+    if (!window.speechSynthesis.speaking || isPaused) return;
   
-      const now = Date.now();
-      const elapsed = (now - startTime) - totalPausedTime;
-      const currentTime = Math.floor(elapsed / 1000);
-      const progress = (currentTime / totalDuration) * 100;
+    const now = Date.now();
+    const elapsed = (now - startTime) - totalPausedTime;
+    const currentTime = Math.floor(elapsed / 1000);
+    const progress = (currentTime / totalDuration) * 100;
   
-      const minutes = Math.floor(currentTime / 60);
-      const seconds = currentTime % 60;
+    const minutes = Math.floor(currentTime / 60);
+    const seconds = currentTime % 60;
   
-      document.getElementById('currentTime').textContent =
-        `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      document.getElementById('progressBar').style.width = `${Math.min(progress, 100)}%`;
+    document.getElementById('currentTime').textContent =
+      `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('progressBar').style.width = `${Math.min(progress, 100)}%`;
   
-      if (window.speechSynthesis.speaking && !isPaused) {
-        animationId = requestAnimationFrame(updateProgress);
-      }
-    } catch (error) {
-      console.error("Error updating progress:", error);
+    if (window.speechSynthesis.speaking && !isPaused) {
+      animationId = requestAnimationFrame(updateProgress);
     }
+  } catch (error) {
+    console.error("Error updating progress:", error);
   }
+}
   
-  // Update voice status when controls change
-  accent.addEventListener('change', updateVoiceAvailabilityStatus);
-  voiceGender.addEventListener('change', updateVoiceAvailabilityStatus);
+accent.addEventListener('change', updateVoiceAvailabilityStatus);
+voiceGender.addEventListener('change', updateVoiceAvailabilityStatus);
   
-  speed.addEventListener('change', () => {
-    if (window.speechSynthesis.speaking) {
-      // Set flag before canceling speech to prevent error alerts
-      isIntentionallyStopping = true;
-      
-      // Cancel current speech
-      window.speechSynthesis.cancel();
-      
-      // Store character position for later
-      const currentPosition = currentChar;
-      
-      // Set up new speech with updated speed
-      setSpeech();
-      
-      // Start speaking with new speed settings
-      window.speechSynthesis.speak(speech);
-      
-      // Reset timing variables
-      startTime = Date.now();
-      totalPausedTime = 0;
-      pauseStartTime = 0;
-      
-      // Reset animation frame
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      requestAnimationFrame(updateProgress);
-      
-      // Reset the flag after a short delay
-      setTimeout(() => {
-        isIntentionallyStopping = false;
-      }, 100);
-    } else {
-      calculateReadingTime();
+speed.addEventListener('change', () => {
+  if (window.speechSynthesis.speaking) {
+    isIntentionallyStopping = true;
+    
+    window.speechSynthesis.cancel();
+    
+    const currentPosition = currentChar;
+    
+    setSpeech();
+    
+    window.speechSynthesis.speak(speech);
+    
+    startTime = Date.now();
+    totalPausedTime = 0;
+    pauseStartTime = 0;
+    
+    if (animationId) {
+      cancelAnimationFrame(animationId);
     }
-  });
+    requestAnimationFrame(updateProgress);
+    
+    setTimeout(() => {
+      isIntentionallyStopping = false;
+    }, 100);
+  } else {
+    calculateReadingTime();
+  }
+});
   
-  // Play button
 playBtn.addEventListener('click', () => {
   console.log("Play button clicked");
 
@@ -587,7 +532,6 @@ playBtn.addEventListener('click', () => {
     console.log("Resuming paused speech");
     window.speechSynthesis.resume();
     
-    // Calculate pause duration and add to total paused time
     if (isPaused && pauseStartTime > 0) {
       const pauseDuration = Date.now() - pauseStartTime;
       totalPausedTime += pauseDuration;
@@ -598,19 +542,16 @@ playBtn.addEventListener('click', () => {
     requestAnimationFrame(updateProgress);
   } else {
     console.log("Starting new speech");
-    window.speechSynthesis.cancel(); // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
     
     const success = setSpeech();
     if (success) {
-      // Try to force audio interaction
       const tempUtterance = new SpeechSynthesisUtterance('');
       window.speechSynthesis.speak(tempUtterance);
       window.speechSynthesis.cancel();
       
-      // Now play the real speech
       window.speechSynthesis.speak(speech);
       
-      // Reset all timing variables
       startTime = Date.now();
       totalPausedTime = 0;
       pauseStartTime = 0;
@@ -618,7 +559,6 @@ playBtn.addEventListener('click', () => {
       
       requestAnimationFrame(updateProgress);
       
-      // Double-check if speech started
       setTimeout(() => {
         if (!window.speechSynthesis.speaking) {
           alert("Speech failed to start. This may be due to browser restrictions. Try clicking elsewhere on the page first.");
@@ -629,35 +569,31 @@ playBtn.addEventListener('click', () => {
   }
 });
   
-  // Pause button
-  pauseBtn.addEventListener('click', () => {
-    console.log("Pause button clicked");
+pauseBtn.addEventListener('click', () => {
+  console.log("Pause button clicked");
     
-    if (!window.speechSynthesis.speaking) return;
+  if (!window.speechSynthesis.speaking) return;
     
-    window.speechSynthesis.pause();
-    isPaused = true;
-    pauseStartTime = Date.now(); // Store when we paused
+  window.speechSynthesis.pause();
+  isPaused = true;
+  pauseStartTime = Date.now();
     
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
-  });
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+});
   
-  // Replace the Stop button handler
 stopBtn.addEventListener('click', () => {
   console.log("Stop button clicked");
   
   try {
-    // Set flag before canceling speech
     isIntentionallyStopping = true;
     
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     
-    // Reset all timing variables
     isPaused = false;
     totalPausedTime = 0;
     pauseStartTime = 0;
@@ -667,14 +603,12 @@ stopBtn.addEventListener('click', () => {
       animationId = null;
     }
     
-    // Safely update UI elements
     const currentTimeElement = document.getElementById('currentTime');
     const progressBarElement = document.getElementById('progressBar');
     
     if (currentTimeElement) currentTimeElement.textContent = '0:00';
     if (progressBarElement) progressBarElement.style.width = '0%';
     
-    // Find content element - first try WordPress then demo content
     const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
     if (pageContent) {
       clearHighlight(pageContent);
@@ -682,49 +616,41 @@ stopBtn.addEventListener('click', () => {
     
     console.log("Speech stopped successfully");
     
-    // Reset flag after a short delay to allow the error event to fire first
     setTimeout(() => {
       isIntentionallyStopping = false;
     }, 100);
   } catch (error) {
     console.error("Error stopping speech:", error);
-    isIntentionallyStopping = false;  // Reset flag in case of error
+    isIntentionallyStopping = false;
   }
 });
 
-// Fix the Replay button handler
 replayBtn.addEventListener('click', () => {
   console.log("Replay button clicked");
   
   try {
-    // Set flag before canceling speech (just like in stop button)
     isIntentionallyStopping = true;
     
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     
-    // Find content element
     const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
     if (pageContent) {
       clearHighlight(pageContent);
     }
     
-    // Reset timing variables
     isPaused = false;
     totalPausedTime = 0;
     pauseStartTime = 0;
     
-    // Call setSpeech with proper error handling
     const success = setSpeech();
     if (success) {
       startTime = Date.now();
       
-      // Add a short delay to ensure proper initialization
       setTimeout(() => {
         window.speechSynthesis.speak(speech);
         
-        // Ensure any previous animation frame is canceled
         if (animationId) {
           cancelAnimationFrame(animationId);
           animationId = null;
@@ -733,22 +659,18 @@ replayBtn.addEventListener('click', () => {
         requestAnimationFrame(updateProgress);
         console.log("Speech replay started successfully");
         
-        // Reset flag after speech has started
         isIntentionallyStopping = false;
       }, 50);
     } else {
-      // Reset flag if speech setup failed
       isIntentionallyStopping = false;
     }
   } catch (error) {
     console.error("Error replaying speech:", error);
-    isIntentionallyStopping = false;  // Reset flag in case of error
+    isIntentionallyStopping = false;
   }
 });
 
-// Initial setup: attempt to load voices with retry logic
 function initVoices() {
-  // Load voices immediately if they're available
   voices = window.speechSynthesis.getVoices();
   
   if (voices && voices.length > 0) {
@@ -758,7 +680,6 @@ function initVoices() {
       setTimeout(addVoiceInspectorButton, 1000);
     }
   } else {
-    // Set up a polling mechanism to keep trying
     let attempts = 0;
     const maxAttempts = 10;
     
@@ -785,28 +706,20 @@ function initVoices() {
   }
 }
   
-  // Bind the browser-specific event to handle when voices become available
-  if (window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-  }
+if (window.speechSynthesis.onvoiceschanged !== undefined) {
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
   
-  // Kick off the voice loading on page load
-  initVoices();
+initVoices();
 
-// Add this code to the end of your script.js file
-
-// Set up event listeners for the new widget design
 document.addEventListener('DOMContentLoaded', function() {
-  // Synchronize speed value display with actual speed input
   const speedValue = document.getElementById('speedValue');
   speed.value = 1.0;
   speedValue.textContent = "1.0x";
   
-  // Toggle button for widget
   document.getElementById('ttsToggle').addEventListener('click', () => {
     document.querySelector('.tts-widget').classList.add('active');
     document.getElementById('ttsToggle').classList.add('hidden');
-    // Calculate reading time when widget is opened
     calculateReadingTime();
   });
 
@@ -815,12 +728,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('ttsToggle').classList.remove('hidden');
   });
 
-  // Gender toggle button
   const genderToggleBtn = document.getElementById('genderToggle');
   const maleIcon = genderToggleBtn.querySelector('.fa-male');
   const femaleIcon = genderToggleBtn.querySelector('.fa-female');
   
-  // Make sure male is active initially
   maleIcon.classList.add('active');
   femaleIcon.classList.remove('active');
   voiceGender.value = 'male';
@@ -836,21 +747,18 @@ document.addEventListener('DOMContentLoaded', function() {
       voiceGender.value = 'male';
     }
     
-    // Update voice selection
     updateVoiceAvailabilityStatus();
   });
 
-  // Speed buttons
   let currentSpeed = 1.0;
 
   document.getElementById('speedUp').addEventListener('click', () => {
     if (currentSpeed < 2.0) {
       currentSpeed = Math.min(2.0, currentSpeed + 0.1);
-      currentSpeed = Math.round(currentSpeed * 10) / 10; // Round to 1 decimal place
+      currentSpeed = Math.round(currentSpeed * 10) / 10;
       speedValue.textContent = currentSpeed.toFixed(1) + 'x';
       speed.value = currentSpeed;
       
-      // Set flag before making speed changes during active speech
       if (window.speechSynthesis.speaking) {
         isIntentionallyStopping = true;
         
@@ -864,7 +772,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         requestAnimationFrame(updateProgress);
         
-        // Reset the flag after a short delay
         setTimeout(() => {
           isIntentionallyStopping = false;
         }, 100);
@@ -877,11 +784,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('speedDown').addEventListener('click', () => {
     if (currentSpeed > 0.5) {
       currentSpeed = Math.max(0.5, currentSpeed - 0.1);
-      currentSpeed = Math.round(currentSpeed * 10) / 10; // Round to 1 decimal place
+      currentSpeed = Math.round(currentSpeed * 10) / 10;
       speedValue.textContent = currentSpeed.toFixed(1) + 'x';
       speed.value = currentSpeed;
       
-      // Set flag before making speed changes during active speech
       if (window.speechSynthesis.speaking) {
         isIntentionallyStopping = true;
         
@@ -895,7 +801,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         requestAnimationFrame(updateProgress);
         
-        // Reset the flag after a short delay
         setTimeout(() => {
           isIntentionallyStopping = false;
         }, 100);
@@ -905,19 +810,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Calculate reading time on page load
   calculateReadingTime();
 });
 
-// Replace the language switcher implementation with this content-based approach
-
-// Function to detect language from content
 function detectContentLanguage() {
-  // Try to find content in the WordPress structure
   const contentElement = document.querySelector('.site-content');
-  if (!contentElement) return 'en'; // Default to English if no content
+  if (!contentElement) return 'en';
   
-  // Try to find the more specific content container
   const articleContent = contentElement.querySelector('article .entry-content');
   const mainContent = contentElement.querySelector('main');
   const entryContent = contentElement.querySelector('.entry-content');
@@ -934,20 +833,16 @@ function detectContentLanguage() {
   const text = targetElement.textContent.trim();
   if (!text) return 'en';
   
-  // Simple heuristic: If the text contains Arabic characters, consider it Arabic
   const arabicPattern = /[\u0600-\u06FF\u0750-\u077F]/;
   return arabicPattern.test(text) ? 'ar' : 'en';
 }
 
-// Update the language options based on content
 function updateLanguageBasedOnContent() {
   const detectedLanguage = detectContentLanguage();
   console.log(`Detected content language: ${detectedLanguage}`);
   
-  // Update language options to match content
   updateLanguageOptions(detectedLanguage);
   
-  // If it's Arabic, make sure the text direction is set correctly
   const contentElement = document.querySelector('.tts-content');
   if (contentElement) {
     contentElement.dir = detectedLanguage === 'ar' ? 'rtl' : 'ltr';
@@ -956,14 +851,9 @@ function updateLanguageBasedOnContent() {
   return detectedLanguage;
 }
 
-// Modify the DOMContentLoaded event handler for language detection
 document.addEventListener('DOMContentLoaded', function() {
-  // Your existing code...
-  
-  // Remove the language switcher code and replace with auto-detection
   const detectedLanguage = updateLanguageBasedOnContent();
   
-  // Display a language indicator instead of switcher
   const languageIndicator = document.createElement('div');
   languageIndicator.className = 'language-indicator';
   
@@ -978,33 +868,26 @@ document.addEventListener('DOMContentLoaded', function() {
   languageIndicator.appendChild(languageIcon);
   languageIndicator.appendChild(languageText);
   
-  // Insert the indicator where the switcher would have been
   const optionsSection = document.querySelector('.tts-widget-section.options');
   if (optionsSection) {
-    // Insert before accent dropdown
     const accentElement = document.getElementById('accent');
     if (accentElement && accentElement.parentNode) {
       optionsSection.insertBefore(languageIndicator, accentElement.parentNode);
     }
   }
   
-  // Initialize with appropriate voices based on detected language
   updateLanguageOptions(detectedLanguage);
 });
 
-// Improved accent selection for mobile
 function updateLanguageOptions(selectedLanguage) {
   const accentDropdown = document.getElementById('accent');
   if (!accentDropdown) return;
   
-  // Clear existing options
   while (accentDropdown.options.length > 0) {
     accentDropdown.remove(0);
   }
   
-  // Add appropriate options based on detected language
   if (selectedLanguage === 'ar') {
-    // Arabic options only - flag icons only
     const arOptions = [
       { value: 'ar-SA', label: '🇸🇦', title: 'Saudi Arabic' },
       { value: 'ar-EG', label: '🇪🇬', title: 'Egyptian Arabic' },
@@ -1018,10 +901,8 @@ function updateLanguageOptions(selectedLanguage) {
       accentDropdown.appendChild(opt);
     });
     
-    // Default to Saudi Arabic
     accentDropdown.value = 'ar-SA';
   } else {
-    // English options only - flag icons only
     const enOptions = [
       { value: 'en-US', label: '🇺🇸', title: 'American English' },
       { value: 'en-GB', label: '🇬🇧', title: 'British English' },
@@ -1035,25 +916,19 @@ function updateLanguageOptions(selectedLanguage) {
       accentDropdown.appendChild(opt);
     });
     
-    // Default to US English
     accentDropdown.value = 'en-US';
   }
   
-  // Enhanced mobile handling for accent dropdown
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   if (isMobile) {
-    // Make dropdown more mobile friendly
     accentDropdown.style.fontSize = '22px';
     accentDropdown.style.padding = '8px 12px';
     
-    // Add enhanced change handler for mobile
     accentDropdown.addEventListener('change', function() {
       console.log("Accent changed to:", this.value);
       
-      // Update voice selection
       updateVoiceAvailabilityStatus();
       
-      // Show visual feedback for mobile users
       const selectedOption = this.options[this.selectedIndex];
       const feedbackEl = document.createElement('div');
       feedbackEl.style.position = 'fixed';
@@ -1076,23 +951,16 @@ function updateLanguageOptions(selectedLanguage) {
     });
   }
   
-  // Trigger change event to update voice selection
   const event = new Event('change');
   accentDropdown.dispatchEvent(event);
   
-  // Update text content based on selected language
   updateTextContentByLanguage(selectedLanguage);
 }
 
-// Adjust this function to work with WordPress content
 function updateTextContentByLanguage(language) {
-  // For WordPress we want to read existing content, not replace it
-  // So we'll just ensure proper direction setting
-  
   const contentElement = document.querySelector('.site-content');
   if (!contentElement) return;
   
-  // Only update text direction if needed
   if (language === 'ar') {
     contentElement.dir = 'rtl';
   } else {
@@ -1100,17 +968,13 @@ function updateTextContentByLanguage(language) {
   }
 }
 
-// Add this to the end of the document.ready function to ensure the time displays on load:
 document.addEventListener('DOMContentLoaded', function() {
-  // Add this after your existing code
   setTimeout(() => {
-    // Ensure reading time is calculated after everything is loaded
     calculateReadingTime();
     console.log("Initial reading time calculation completed");
   }, 500);
 });
 
-// Improved gender toggle handler
 document.addEventListener('DOMContentLoaded', function() {
   const genderToggleBtn = document.getElementById('genderToggle');
   if (!genderToggleBtn) return;
@@ -1118,12 +982,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const maleIcon = genderToggleBtn.querySelector('.fa-male');
   const femaleIcon = genderToggleBtn.querySelector('.fa-female');
   
-  // Make sure male is active initially
   maleIcon.classList.add('active');
   femaleIcon.classList.remove('active');
   voiceGender.value = 'male';
 
-  // Add explicit touch event handling for mobile
   const toggleGender = () => {
     console.log("Gender toggle clicked");
     if (maleIcon.classList.contains('active')) {
@@ -1136,10 +998,8 @@ document.addEventListener('DOMContentLoaded', function() {
       voiceGender.value = 'male';
     }
     
-    // Update voice selection and show feedback
     updateVoiceAvailabilityStatus();
     
-    // Show visual feedback for mobile users
     const feedbackEl = document.createElement('div');
     feedbackEl.style.position = 'fixed';
     feedbackEl.style.bottom = '70px';
@@ -1160,15 +1020,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1500);
   };
   
-  // Add both click and touch events
   genderToggleBtn.addEventListener('click', toggleGender);
   genderToggleBtn.addEventListener('touchend', (e) => {
-    e.preventDefault(); // Prevent double-firing with click event
+    e.preventDefault();
     toggleGender();
   });
 });
 
-// Add this function to show which voice is actually being used
 function addVoiceInspectorButton() {
   const debugBtn = document.createElement('button');
   debugBtn.style.position = 'fixed';
@@ -1188,7 +1046,6 @@ function addVoiceInspectorButton() {
 }
 
 function showVoiceDetails() {
-  // Create a modal to display voice information
   const modal = document.createElement('div');
   modal.style.position = 'fixed';
   modal.style.top = '50%';
@@ -1203,7 +1060,6 @@ function showVoiceDetails() {
   modal.style.maxHeight = '80%';
   modal.style.overflow = 'auto';
   
-  // Create close button
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '✕';
   closeBtn.style.position = 'absolute';
@@ -1216,13 +1072,11 @@ function showVoiceDetails() {
   closeBtn.addEventListener('click', () => document.body.removeChild(modal));
   modal.appendChild(closeBtn);
   
-  // Add title
   const title = document.createElement('h2');
   title.textContent = 'Voice Inspector';
   title.style.marginTop = '0';
   modal.appendChild(title);
 
-  // Add selected voice info
   const selectedVoiceInfo = document.createElement('div');
   selectedVoiceInfo.style.marginBottom = '20px';
   selectedVoiceInfo.style.padding = '10px';
@@ -1232,25 +1086,19 @@ function showVoiceDetails() {
   const selectedGender = voiceGender.value;
   const selectedAccent = accent.value;
   
-  // Find the voice that would be used based on current settings
   const baseCode = selectedAccent.substring(0, 2);
   let voiceToUse = null;
   
-  // Try to find exact match for gender and accent
   if (voicesByAccent[selectedAccent] && voicesByAccent[selectedAccent][selectedGender].length > 0) {
     voiceToUse = voicesByAccent[selectedAccent][selectedGender][0];
-  } 
-  // Try fallback to other gender with same accent
-  else if (voicesByAccent[selectedAccent]) {
+  } else if (voicesByAccent[selectedAccent]) {
     const fallbackGender = selectedGender === 'male' ? 'female' : 'male';
     if (voicesByAccent[selectedAccent][fallbackGender].length > 0) {
       voiceToUse = voicesByAccent[selectedAccent][fallbackGender][0];
     } else if (voicesByAccent[selectedAccent].unknown.length > 0) {
       voiceToUse = voicesByAccent[selectedAccent].unknown[0];
     }
-  } 
-  // Try fallback to base language code
-  else if (voicesByAccent[baseCode]) {
+  } else if (voicesByAccent[baseCode]) {
     if (voicesByAccent[baseCode][selectedGender].length > 0) {
       voiceToUse = voicesByAccent[baseCode][selectedGender][0];
     } else if (voicesByAccent[baseCode][selectedGender === 'male' ? 'female' : 'male'].length > 0) {
@@ -1268,7 +1116,6 @@ function showVoiceDetails() {
       Accent: ${selectedAccent}<br>
       <strong>Gender Match:</strong> ${voiceToUse.name.toLowerCase().includes(selectedGender) ? '✓ Matches' : '✗ Mismatch'}`;
       
-    // Add a test button
     const testBtn = document.createElement('button');
     testBtn.textContent = 'Test This Voice';
     testBtn.style.marginTop = '10px';
@@ -1293,7 +1140,6 @@ function showVoiceDetails() {
   
   modal.appendChild(selectedVoiceInfo);
   
-  // Add available voices list
   const voicesList = document.createElement('div');
   voicesList.innerHTML = '<h3>All Available Voices (' + voices.length + ')</h3>';
   
@@ -1302,7 +1148,6 @@ function showVoiceDetails() {
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
     
-    // Add table header
     const thead = document.createElement('thead');
     thead.innerHTML = `<tr>
       <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Name</th>
@@ -1313,13 +1158,11 @@ function showVoiceDetails() {
     </tr>`;
     table.appendChild(thead);
     
-    // Add table body
     const tbody = document.createElement('tbody');
     voices.forEach((voice, index) => {
       const row = document.createElement('tr');
       row.style.backgroundColor = index % 2 === 0 ? '#f9f9f9' : 'white';
       
-      // Determine gender based on name
       let genderGuess = 'unknown';
       const lowerName = voice.name.toLowerCase();
       if (lowerName.includes('female') || lowerName.includes('woman') || 
@@ -1333,7 +1176,6 @@ function showVoiceDetails() {
         genderGuess = 'male';
       }
       
-      // Create test button for this voice
       const testVoiceBtn = document.createElement('button');
       testVoiceBtn.textContent = 'Test';
       testVoiceBtn.style.padding = '2px 6px';
@@ -1349,7 +1191,6 @@ function showVoiceDetails() {
         speechSynthesis.speak(testUtterance);
       });
       
-      // Create cells
       row.innerHTML = `
         <td style="padding:8px;border-bottom:1px solid #ddd;">${voice.name}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;">${voice.lang}</td>
@@ -1376,12 +1217,9 @@ function showVoiceDetails() {
   document.body.appendChild(modal);
 }
 
-// Add this function to show what voice is actually being used when speech starts
 function showActiveVoiceInfo() {
-  // Only show this on mobile
   if (!isMobile) return;
   
-  // Create an info box
   const infoBox = document.createElement('div');
   infoBox.style.position = 'fixed';
   infoBox.style.bottom = '120px';
@@ -1395,7 +1233,6 @@ function showActiveVoiceInfo() {
   infoBox.style.maxWidth = '200px';
   infoBox.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
   
-  // Add content
   if (speech && speech.voice) {
     infoBox.innerHTML = `
       <strong>Active Voice:</strong><br>
@@ -1407,10 +1244,8 @@ function showActiveVoiceInfo() {
     infoBox.textContent = 'No active voice';
   }
   
-  // Add to page
   document.body.appendChild(infoBox);
   
-  // Remove after 5 seconds
   setTimeout(() => {
     infoBox.style.opacity = '0';
     infoBox.style.transition = 'opacity 0.5s ease';
