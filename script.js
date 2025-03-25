@@ -146,25 +146,47 @@ function updateVoiceAvailabilityStatus() {
   
   // Updated content selection logic for TTS
   // Replace all content selections with WordPress selector
-// Replace the setSpeech function with this version that reads all visible text
 function setSpeech() {
   try {
     const gender = voiceGender.value;
     const selectedAccent = accent.value;
     
-    // Get all visible text from the body using our new function
-    const textToRead = getAllVisibleTextContent();
+    // Try WordPress content first, then fall back to demo content
+    const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
+
+    if (!pageContent) {
+      alert("No content found to read. Please make sure your content is properly marked up.");
+      console.error("No content element found to read");
+      return;
+    }
+
+    // Get only the main content, excluding navigation, sidebar, etc.
+    let contentToRead = pageContent;
     
-    if (!textToRead || textToRead.trim() === '') {
-      alert("No readable content found on this page.");
+    // Try to find more specific content containers
+    const articleContent = pageContent.querySelector('article .entry-content');
+    const mainContent = pageContent.querySelector('main');
+    const entryContent = pageContent.querySelector('.entry-content');
+    
+    if (articleContent) {
+      contentToRead = articleContent;
+    } else if (entryContent) {
+      contentToRead = entryContent;
+    } else if (mainContent) {
+      contentToRead = mainContent;
+    }
+
+    const textToRead = contentToRead.textContent.trim();
+    if (!textToRead) {
+      alert("No text content found to read.");
       console.error("No text content found to read");
-      return false;
+      return;
     }
 
     // Check if speech synthesis is available
     if (!window.speechSynthesis) {
       alert("Your browser doesn't support text-to-speech. Please try Chrome, Edge or Safari.");
-      return false;
+      return;
     }
 
     // Make sure we have voices
@@ -174,7 +196,7 @@ function setSpeech() {
       
       if (!voices || voices.length === 0) {
         alert("No text-to-speech voices found. Please try reloading the page or using a different browser.");
-        return false;
+        return;
       }
     }
 
@@ -191,7 +213,7 @@ function setSpeech() {
     if (!selectedVoice) {
       alert("No voice available for speech. Please try a different language or accent.");
       console.error("No voice available for speech");
-      return false;
+      return;
     }
 
     speech = new SpeechSynthesisUtterance();
@@ -201,17 +223,16 @@ function setSpeech() {
     speech.text = textToRead;
     speech.volume = 1.0; // Ensure volume is at maximum
 
-    // Store text for highlighting (we'll use document.body since we're reading all visible text)
-    window.ttsFullText = textToRead;
+    // Store reference to current content element for highlighting
+    window.currentContentElement = contentToRead;
 
     speech.onstart = () => {
       console.log("Speech started with voice:", selectedVoice.name);
     };
 
-    // Handle highlighting globally instead of in a specific container
     speech.onboundary = (event) => {
       try {
-        highlightTextGlobally(event.charIndex);
+        highlightText(event.charIndex, contentToRead);
       } catch (e) {
         console.error("Error highlighting text:", e);
       }
@@ -219,7 +240,7 @@ function setSpeech() {
 
     speech.onend = () => {
       console.log("Speech ended");
-      clearAllHighlights();
+      clearHighlight(contentToRead);
       document.getElementById('currentTime').textContent = '0:00';
       document.getElementById('progressBar').style.width = '0%';
     };
@@ -233,7 +254,7 @@ function setSpeech() {
       }
     };
 
-    calculateReadingTime(textToRead);
+    calculateReadingTime();
     debugAudio(); // Log diagnostic info
     
     return true;
@@ -241,211 +262,6 @@ function setSpeech() {
     console.error("Error setting up speech:", error);
     alert("There was a problem setting up the speech. Please try reloading the page.");
     return false;
-  }
-}
-
-// New function to get all visible text from the page
-function getAllVisibleTextContent() {
-  // Elements we want to skip when gathering text
-  const excludeSelectors = [
-    'script', 'style', 'noscript', 'iframe', 'meta', 'link', 'svg', 
-    '.tts-widget', '.tts-toggle-btn', '.tts-close-btn', '#ttsToggle',
-    'header nav', 'nav', 'footer', 'aside', '.sidebar', '.widget',
-    '[role="banner"]', '[role="navigation"]', '[role="complementary"]'
-  ];
-  
-  // Function to check if an element is visible
-  function isVisible(element) {
-    if (!element) return false;
-    
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' && 
-           style.visibility !== 'hidden' && 
-           style.opacity !== '0' &&
-           element.offsetWidth > 0 && 
-           element.offsetHeight > 0;
-  }
-  
-  // Function to check if element should be excluded
-  function shouldExclude(element) {
-    return excludeSelectors.some(selector => {
-      if (selector.startsWith('.') || selector.startsWith('#') || selector.includes('[')) {
-        return element.matches && element.matches(selector);
-      } else {
-        return element.tagName && element.tagName.toLowerCase() === selector;
-      }
-    });
-  }
-  
-  // Collect all text nodes
-  function collectTextNodes(root, textNodes = []) {
-    if (!root || !isVisible(root) || shouldExclude(root)) {
-      return textNodes;
-    }
-    
-    if (root.nodeType === Node.TEXT_NODE) {
-      const text = root.textContent.trim();
-      if (text) {
-        textNodes.push({
-          node: root,
-          text: text,
-          parent: root.parentElement
-        });
-      }
-    } else {
-      for (let i = 0; i < root.childNodes.length; i++) {
-        collectTextNodes(root.childNodes[i], textNodes);
-      }
-    }
-    return textNodes;
-  }
-  
-  // Get all visible text nodes
-  const textNodes = collectTextNodes(document.body);
-  
-  // Map text to their screen positions for logical reading order
-  const nodesWithPosition = textNodes.map(item => {
-    let rect = { top: 0, left: 0 };
-    try {
-      if (item.parent) {
-        const range = document.createRange();
-        range.selectNodeContents(item.node);
-        rect = range.getBoundingClientRect();
-      }
-    } catch(e) {}
-    
-    return {
-      ...item,
-      top: rect.top,
-      left: rect.left
-    };
-  });
-  
-  // Sort nodes by vertical position first, then horizontal
-  nodesWithPosition.sort((a, b) => {
-    const verticalDiff = a.top - b.top;
-    if (Math.abs(verticalDiff) > 20) { // Within 20px consider on same line
-      return verticalDiff;
-    }
-    return a.left - b.left; // Sort by horizontal position if on same line
-  });
-  
-  // Extract just the text in reading order
-  const fullText = nodesWithPosition.map(item => item.text).join(' ');
-  
-  // Store the mapping of text to nodes for highlighting
-  window.ttsTextMap = nodesWithPosition;
-  
-  return fullText;
-}
-
-// New function to highlight text globally
-function highlightTextGlobally(charIndex) {
-  try {
-    // Clear any existing highlights
-    clearAllHighlights();
-    
-    if (!window.ttsFullText || !window.ttsTextMap) return;
-    
-    // Find where in the full text we are
-    const currentText = window.ttsFullText.substring(charIndex, charIndex + 30);
-    if (!currentText) return;
-    
-    // Find which text node contains this text
-    let lastMatchNode = null;
-    let bestMatchScore = 0;
-    
-    window.ttsTextMap.forEach(item => {
-      if (item.text.includes(currentText.substring(0, 10))) {
-        const matchScore = getMatchScore(item.text, currentText);
-        if (matchScore > bestMatchScore) {
-          bestMatchScore = matchScore;
-          lastMatchNode = item;
-        }
-      }
-    });
-    
-    // If we found a matching node, highlight it
-    if (lastMatchNode && lastMatchNode.parent) {
-      const highlightSpan = document.createElement('span');
-      highlightSpan.className = 'tts-highlight';
-      highlightSpan.textContent = lastMatchNode.text;
-      
-      // Replace text with highlighted version
-      const parent = lastMatchNode.parent;
-      const textNode = lastMatchNode.node;
-      
-      // Insert the highlighted span
-      if (parent && textNode) {
-        parent.insertBefore(highlightSpan, textNode);
-        parent.removeChild(textNode);
-        
-        // Scroll to the highlighted element
-        highlightSpan.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }
-  } catch (error) {
-    console.error("Error in highlighting:", error);
-  }
-}
-
-// Helper function to calculate match score between two text snippets
-function getMatchScore(text1, text2) {
-  let score = 0;
-  const minLength = Math.min(text1.length, text2.length);
-  
-  for (let i = 0; i < minLength; i++) {
-    if (text1[i] === text2[i]) {
-      score++;
-    } else {
-      break;
-    }
-  }
-  return score;
-}
-
-// Clear all highlights on the page
-function clearAllHighlights() {
-  const highlights = document.querySelectorAll('.tts-highlight');
-  highlights.forEach(highlight => {
-    if (highlight.parentNode) {
-      const text = highlight.textContent;
-      const textNode = document.createTextNode(text);
-      highlight.parentNode.insertBefore(textNode, highlight);
-      highlight.parentNode.removeChild(highlight);
-    }
-  });
-}
-
-// Update calculateReadingTime to work with the full text input
-function calculateReadingTime(textContent) {
-  try {
-    const text = textContent || getAllVisibleTextContent();
-    if (!text) return;
-    
-    const wordCount = text.trim().split(/\s+/).length;
-    const wordsPerMinute = parseFloat(speed.value) * 150;
-
-    totalDuration = Math.ceil((wordCount / wordsPerMinute) * 60);
-
-    const minutes = Math.floor(totalDuration / 60);
-    const seconds = totalDuration % 60;
-
-    // Make sure these elements exist
-    const totalTimeElement = document.getElementById('totalTime');
-    const currentTimeElement = document.getElementById('currentTime');
-    const progressBarElement = document.getElementById('progressBar');
-    
-    if (totalTimeElement) totalTimeElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    if (currentTimeElement) currentTimeElement.textContent = '0:00';
-    if (progressBarElement) progressBarElement.style.width = '0%';
-    
-    console.log(`Calculated reading time: ${minutes}:${seconds.toString().padStart(2, '0')}`);
-  } catch (error) {
-    console.error("Error calculating reading time:", error);
   }
 }
   
