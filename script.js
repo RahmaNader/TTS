@@ -1,11 +1,56 @@
-// Add this debugging function at the top of your script.js file
+// Mobile detection and enhanced debugging
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 function debugAudio() {
-  console.log("Audio debugging:");
-  console.log("- SpeechSynthesis available:", 'speechSynthesis' in window);
-  console.log("- Voices loaded:", voices.length);
-  console.log("- Is speaking:", window.speechSynthesis.speaking);
-  console.log("- Is paused:", window.speechSynthesis.paused);
-  console.log("- Current content element:", document.querySelector('.site-content') || document.querySelector('.tts-content'));
+  const debugInfo = {
+    "Device": isMobile ? "Mobile" : "Desktop",
+    "User Agent": navigator.userAgent,
+    "SpeechSynthesis available": 'speechSynthesis' in window,
+    "Voices loaded": voices.length,
+    "Is speaking": window.speechSynthesis?.speaking,
+    "Is paused": window.speechSynthesis?.paused,
+    "Current content element": document.querySelector('.site-content') || document.querySelector('.tts-content')
+  };
+  
+  console.log("Audio debugging:", debugInfo);
+  
+  // On mobile, create a debug overlay for easier troubleshooting
+  if (isMobile) {
+    // Create a floating debug button for developers
+    const debugBtn = document.createElement('button');
+    debugBtn.style.position = 'fixed';
+    debugBtn.style.bottom = '80px';
+    debugBtn.style.right = '20px';
+    debugBtn.style.zIndex = '9999';
+    debugBtn.style.padding = '8px';
+    debugBtn.style.borderRadius = '50%';
+    debugBtn.style.backgroundColor = '#ff5722';
+    debugBtn.style.color = 'white';
+    debugBtn.style.border = 'none';
+    debugBtn.style.width = '40px';
+    debugBtn.style.height = '40px';
+    debugBtn.style.fontSize = '18px';
+    debugBtn.textContent = '🐞';
+    
+    debugBtn.addEventListener('click', showDebugInfo);
+    
+    document.body.appendChild(debugBtn);
+  }
+}
+
+function showDebugInfo() {
+  const voicesInfo = voices.map(v => `${v.name} (${v.lang})`).join('\n');
+  
+  alert(`TTS Debug Info:
+- Device: ${isMobile ? "Mobile" : "Desktop"}
+- Browser: ${navigator.userAgent}
+- Speech API available: ${'speechSynthesis' in window}
+- Voices loaded: ${voices.length}
+- Selected voice gender: ${voiceGender?.value || 'N/A'}
+- Selected accent: ${accent?.value || 'N/A'}
+- Speech is active: ${window.speechSynthesis?.speaking || false}
+- Content element found: ${Boolean(document.querySelector('.site-content') || document.querySelector('.tts-content'))}
+  `);
 }
 
 // Add this check at the beginning of your script
@@ -265,30 +310,108 @@ function setSpeech() {
   }
 }
   
-  function highlightText(charIndex, element) {
-    try {
-      if (!element) return;
-  
-      clearHighlight(element);
+function highlightText(charIndex, element) {
+  try {
+    if (!element) return;
+    
+    // Clear any existing highlight first
+    clearHighlight(element);
+    
+    // Store original content if not already saved
+    if (!element._originalContent) {
+      element._originalContent = element.innerHTML;
+    }
+    
+    // For mobile, use a different approach
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // On mobile, scroll to the highlighted text area
+      const textNodes = getTextNodesIn(element);
+      let currentLength = 0;
+      let targetNode = null;
+      let nodeCharIndex = 0;
+      
+      // Find the text node containing our target character
+      for (let i = 0; i < textNodes.length; i++) {
+        let nodeLength = textNodes[i].length;
+        if (currentLength + nodeLength > charIndex) {
+          targetNode = textNodes[i];
+          nodeCharIndex = charIndex - currentLength;
+          break;
+        }
+        currentLength += nodeLength;
+      }
+      
+      if (targetNode && targetNode.parentNode) {
+        // Create a temporary marker to scroll to
+        const marker = document.createElement('span');
+        marker.className = 'tts-highlight';
+        marker.textContent = targetNode.textContent.substring(nodeCharIndex, nodeCharIndex + 10);
+        
+        // Replace text node with marker and remaining text
+        const beforeText = document.createTextNode(targetNode.textContent.substring(0, nodeCharIndex));
+        const afterText = document.createTextNode(targetNode.textContent.substring(nodeCharIndex + 10));
+        
+        const parentNode = targetNode.parentNode;
+        parentNode.insertBefore(beforeText, targetNode);
+        parentNode.insertBefore(marker, targetNode);
+        parentNode.insertBefore(afterText, targetNode);
+        parentNode.removeChild(targetNode);
+        
+        // Scroll to the marker
+        marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      // Original implementation for desktop
       const text = element.textContent;
       const before = text.substring(0, charIndex);
       const highlight = text.substring(charIndex, charIndex + 10);
       const after = text.substring(charIndex + 10);
-  
+      
       element.innerHTML = before +
         '<span class="tts-highlight">' + highlight + '</span>' +
         after;
-    } catch (e) {
-      console.error("Highlighting error:", e);
+    }
+  } catch (e) {
+    console.error("Highlighting error:", e);
+  }
+}
+
+// Helper function to get all text nodes in an element
+function getTextNodesIn(node) {
+  var textNodes = [];
+  if (node.nodeType == 3) {
+    textNodes.push(node);
+  } else {
+    var children = node.childNodes;
+    for (var i = 0; i < children.length; ++i) {
+      textNodes.push.apply(textNodes, getTextNodesIn(children[i]));
     }
   }
+  return textNodes;
+}
+
+// Update the clearHighlight function
+function clearHighlight(element) {
+  if (!element) return;
   
-  function clearHighlight(element) {
-    if (element) {
-      element.innerHTML = element.textContent;
-    }
+  // Remove all highlight spans
+  const highlights = element.querySelectorAll('.tts-highlight');
+  highlights.forEach(highlight => {
+    // Replace with text node
+    const text = document.createTextNode(highlight.textContent);
+    highlight.parentNode.replaceChild(text, highlight);
+  });
+  
+  // Restore original content if available and needed
+  if (element._originalContent && highlights.length === 0) {
+    element.innerHTML = element._originalContent;
+    delete element._originalContent;
   }
-  // Replace the calculateReadingTime function with this version:
+}
+
+// Replace the calculateReadingTime function with this version:
 function calculateReadingTime() {
   try {
     // Support both WordPress and demo content
@@ -811,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateLanguageOptions(detectedLanguage);
 });
 
-// Update the language options function to match content and reduce options
+// Improved accent selection for mobile
 function updateLanguageOptions(selectedLanguage) {
   const accentDropdown = document.getElementById('accent');
   if (!accentDropdown) return;
@@ -825,15 +948,15 @@ function updateLanguageOptions(selectedLanguage) {
   if (selectedLanguage === 'ar') {
     // Arabic options only - flag icons only
     const arOptions = [
-      { value: 'ar-SA', label: '🇸🇦' },
-      { value: 'ar-EG', label: '🇪🇬' },
+      { value: 'ar-SA', label: '🇸🇦', title: 'Saudi Arabic' },
+      { value: 'ar-EG', label: '🇪🇬', title: 'Egyptian Arabic' },
     ];
     
     arOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
-      opt.title = option.value === 'ar-SA' ? 'Saudi Arabic' : 'Egyptian Arabic';
+      opt.title = option.title;
       accentDropdown.appendChild(opt);
     });
     
@@ -842,20 +965,57 @@ function updateLanguageOptions(selectedLanguage) {
   } else {
     // English options only - flag icons only
     const enOptions = [
-      { value: 'en-US', label: '🇺🇸' },
-      { value: 'en-GB', label: '🇬🇧' },
+      { value: 'en-US', label: '🇺🇸', title: 'American English' },
+      { value: 'en-GB', label: '🇬🇧', title: 'British English' },
     ];
     
     enOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
-      opt.title = option.value === 'en-US' ? 'American English' : 'British English';
+      opt.title = option.title;
       accentDropdown.appendChild(opt);
     });
     
     // Default to US English
     accentDropdown.value = 'en-US';
+  }
+  
+  // Enhanced mobile handling for accent dropdown
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    // Make dropdown more mobile friendly
+    accentDropdown.style.fontSize = '22px';
+    accentDropdown.style.padding = '8px 12px';
+    
+    // Add enhanced change handler for mobile
+    accentDropdown.addEventListener('change', function() {
+      console.log("Accent changed to:", this.value);
+      
+      // Update voice selection
+      updateVoiceAvailabilityStatus();
+      
+      // Show visual feedback for mobile users
+      const selectedOption = this.options[this.selectedIndex];
+      const feedbackEl = document.createElement('div');
+      feedbackEl.style.position = 'fixed';
+      feedbackEl.style.bottom = '70px';
+      feedbackEl.style.left = '50%';
+      feedbackEl.style.transform = 'translateX(-50%)';
+      feedbackEl.style.backgroundColor = 'rgba(0,0,0,0.7)';
+      feedbackEl.style.color = 'white';
+      feedbackEl.style.padding = '8px 12px';
+      feedbackEl.style.borderRadius = '4px';
+      feedbackEl.style.zIndex = '9999';
+      feedbackEl.textContent = `Accent: ${selectedOption.title}`;
+      document.body.appendChild(feedbackEl);
+      
+      setTimeout(() => {
+        feedbackEl.style.opacity = '0';
+        feedbackEl.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => document.body.removeChild(feedbackEl), 500);
+      }, 1500);
+    });
   }
   
   // Trigger change event to update voice selection
@@ -890,4 +1050,62 @@ document.addEventListener('DOMContentLoaded', function() {
     calculateReadingTime();
     console.log("Initial reading time calculation completed");
   }, 500);
+});
+
+// Improved gender toggle handler
+document.addEventListener('DOMContentLoaded', function() {
+  const genderToggleBtn = document.getElementById('genderToggle');
+  if (!genderToggleBtn) return;
+  
+  const maleIcon = genderToggleBtn.querySelector('.fa-male');
+  const femaleIcon = genderToggleBtn.querySelector('.fa-female');
+  
+  // Make sure male is active initially
+  maleIcon.classList.add('active');
+  femaleIcon.classList.remove('active');
+  voiceGender.value = 'male';
+
+  // Add explicit touch event handling for mobile
+  const toggleGender = () => {
+    console.log("Gender toggle clicked");
+    if (maleIcon.classList.contains('active')) {
+      maleIcon.classList.remove('active');
+      femaleIcon.classList.add('active');
+      voiceGender.value = 'female';
+    } else {
+      femaleIcon.classList.remove('active');
+      maleIcon.classList.add('active');
+      voiceGender.value = 'male';
+    }
+    
+    // Update voice selection and show feedback
+    updateVoiceAvailabilityStatus();
+    
+    // Show visual feedback for mobile users
+    const feedbackEl = document.createElement('div');
+    feedbackEl.style.position = 'fixed';
+    feedbackEl.style.bottom = '70px';
+    feedbackEl.style.left = '50%';
+    feedbackEl.style.transform = 'translateX(-50%)';
+    feedbackEl.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    feedbackEl.style.color = 'white';
+    feedbackEl.style.padding = '8px 12px';
+    feedbackEl.style.borderRadius = '4px';
+    feedbackEl.style.zIndex = '9999';
+    feedbackEl.textContent = `Voice: ${voiceGender.value}`;
+    document.body.appendChild(feedbackEl);
+    
+    setTimeout(() => {
+      feedbackEl.style.opacity = '0';
+      feedbackEl.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => document.body.removeChild(feedbackEl), 500);
+    }, 1500);
+  };
+  
+  // Add both click and touch events
+  genderToggleBtn.addEventListener('click', toggleGender);
+  genderToggleBtn.addEventListener('touchend', (e) => {
+    e.preventDefault(); // Prevent double-firing with click event
+    toggleGender();
+  });
 });
