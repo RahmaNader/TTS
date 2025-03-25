@@ -196,6 +196,8 @@ function setSpeech() {
     const gender = voiceGender.value;
     const selectedAccent = accent.value;
     
+    console.log(`Setting speech with gender: ${gender}, accent: ${selectedAccent}`);
+    
     // Try WordPress content first, then fall back to demo content
     const pageContent = document.querySelector('.site-content') || document.querySelector('.tts-content');
 
@@ -245,14 +247,43 @@ function setSpeech() {
       }
     }
 
+    // IMPROVED VOICE SELECTION LOGIC
     let selectedVoice = null;
-
+    let fallbackUsed = false;
+    
+    // First, try to find perfect match (gender + full accent code)
     if (voicesByAccent[selectedAccent] && voicesByAccent[selectedAccent][gender]?.length > 0) {
       selectedVoice = voicesByAccent[selectedAccent][gender][0];
-    } else if (voicesByAccent[selectedAccent]?.unknown?.length > 0) {
-      selectedVoice = voicesByAccent[selectedAccent].unknown[0];
-    } else if (voices.length > 0) {
-      selectedVoice = voices[0];
+      console.log(`Found perfect match: ${selectedVoice.name} (${selectedVoice.lang})`);
+    }
+    // If not found, try the base language with correct gender
+    else {
+      fallbackUsed = true;
+      const baseCode = selectedAccent.substring(0, 2); // en, ar, etc.
+      
+      if (voicesByAccent[baseCode] && voicesByAccent[baseCode][gender]?.length > 0) {
+        selectedVoice = voicesByAccent[baseCode][gender][0];
+        console.log(`Using language fallback with correct gender: ${selectedVoice.name} (${selectedVoice.lang})`);
+      }
+      // If still not found, try opposite gender with correct accent
+      else if (voicesByAccent[selectedAccent]) {
+        const oppositeGender = gender === 'male' ? 'female' : 'male';
+        
+        if (voicesByAccent[selectedAccent][oppositeGender]?.length > 0) {
+          selectedVoice = voicesByAccent[selectedAccent][oppositeGender][0];
+          console.log(`Using opposite gender (${oppositeGender}) with correct accent: ${selectedVoice.name} (${selectedVoice.lang})`);
+        }
+        // Try "unknown" gender voices for this accent
+        else if (voicesByAccent[selectedAccent].unknown?.length > 0) {
+          selectedVoice = voicesByAccent[selectedAccent].unknown[0];
+          console.log(`Using "unknown" gender voice with correct accent: ${selectedVoice.name} (${selectedVoice.lang})`);
+        }
+      }
+      // Last resort - just use any voice
+      if (!selectedVoice && voices.length > 0) {
+        selectedVoice = voices[0];
+        console.log(`Using default voice as last resort: ${selectedVoice.name} (${selectedVoice.lang})`);
+      }
     }
 
     if (!selectedVoice) {
@@ -261,10 +292,33 @@ function setSpeech() {
       return;
     }
 
+    // Show UI feedback if fallback was used
+    if (fallbackUsed && isMobile) {
+      const feedbackEl = document.createElement('div');
+      feedbackEl.style.position = 'fixed';
+      feedbackEl.style.bottom = '100px';
+      feedbackEl.style.left = '50%';
+      feedbackEl.style.transform = 'translateX(-50%)';
+      feedbackEl.style.backgroundColor = 'rgba(0,0,0,0.7)';
+      feedbackEl.style.color = 'white';
+      feedbackEl.style.padding = '8px 12px';
+      feedbackEl.style.borderRadius = '4px';
+      feedbackEl.style.zIndex = '9999';
+      feedbackEl.textContent = `Using voice: ${selectedVoice.name}`;
+      document.body.appendChild(feedbackEl);
+      
+      setTimeout(() => {
+        feedbackEl.style.opacity = '0';
+        feedbackEl.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => document.body.removeChild(feedbackEl), 500);
+      }, 3000);
+    }
+
+    // Create the speech utterance with the selected voice
     speech = new SpeechSynthesisUtterance();
     speech.voice = selectedVoice;
     speech.rate = parseFloat(speed.value);
-    speech.lang = selectedAccent;
+    speech.lang = selectedVoice.lang; // Use the actual voice language, not just our selection
     speech.text = textToRead;
     speech.volume = 1.0; // Ensure volume is at maximum
 
@@ -273,6 +327,7 @@ function setSpeech() {
 
     speech.onstart = () => {
       console.log("Speech started with voice:", selectedVoice.name);
+      showActiveVoiceInfo(); // Add this line
     };
 
     speech.onboundary = (event) => {
@@ -699,6 +754,9 @@ function initVoices() {
   if (voices && voices.length > 0) {
     console.log(`${voices.length} voices loaded immediately`);
     loadVoices();
+    if (isMobile) {
+      setTimeout(addVoiceInspectorButton, 1000);
+    }
   } else {
     // Set up a polling mechanism to keep trying
     let attempts = 0;
@@ -1109,3 +1167,253 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleGender();
   });
 });
+
+// Add this function to show which voice is actually being used
+function addVoiceInspectorButton() {
+  const debugBtn = document.createElement('button');
+  debugBtn.style.position = 'fixed';
+  debugBtn.style.bottom = '140px';
+  debugBtn.style.right = '20px';
+  debugBtn.style.zIndex = '9999';
+  debugBtn.style.padding = '8px';
+  debugBtn.style.borderRadius = '5px';
+  debugBtn.style.backgroundColor = '#5d49c8';
+  debugBtn.style.color = 'white';
+  debugBtn.style.border = 'none';
+  debugBtn.style.fontSize = '14px';
+  debugBtn.textContent = '🔍 Voice Inspector';
+  
+  debugBtn.addEventListener('click', showVoiceDetails);
+  document.body.appendChild(debugBtn);
+}
+
+function showVoiceDetails() {
+  // Create a modal to display voice information
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '50%';
+  modal.style.left = '50%';
+  modal.style.transform = 'translate(-50%, -50%)';
+  modal.style.backgroundColor = 'white';
+  modal.style.padding = '20px';
+  modal.style.borderRadius = '8px';
+  modal.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  modal.style.zIndex = '10000';
+  modal.style.maxWidth = '90%';
+  modal.style.maxHeight = '80%';
+  modal.style.overflow = 'auto';
+  
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.position = 'absolute';
+  closeBtn.style.right = '10px';
+  closeBtn.style.top = '10px';
+  closeBtn.style.border = 'none';
+  closeBtn.style.background = 'none';
+  closeBtn.style.fontSize = '20px';
+  closeBtn.style.cursor = 'pointer';
+  closeBtn.addEventListener('click', () => document.body.removeChild(modal));
+  modal.appendChild(closeBtn);
+  
+  // Add title
+  const title = document.createElement('h2');
+  title.textContent = 'Voice Inspector';
+  title.style.marginTop = '0';
+  modal.appendChild(title);
+
+  // Add selected voice info
+  const selectedVoiceInfo = document.createElement('div');
+  selectedVoiceInfo.style.marginBottom = '20px';
+  selectedVoiceInfo.style.padding = '10px';
+  selectedVoiceInfo.style.backgroundColor = '#f0f0f0';
+  selectedVoiceInfo.style.borderRadius = '5px';
+  
+  const selectedGender = voiceGender.value;
+  const selectedAccent = accent.value;
+  
+  // Find the voice that would be used based on current settings
+  const baseCode = selectedAccent.substring(0, 2);
+  let voiceToUse = null;
+  
+  // Try to find exact match for gender and accent
+  if (voicesByAccent[selectedAccent] && voicesByAccent[selectedAccent][selectedGender].length > 0) {
+    voiceToUse = voicesByAccent[selectedAccent][selectedGender][0];
+  } 
+  // Try fallback to other gender with same accent
+  else if (voicesByAccent[selectedAccent]) {
+    const fallbackGender = selectedGender === 'male' ? 'female' : 'male';
+    if (voicesByAccent[selectedAccent][fallbackGender].length > 0) {
+      voiceToUse = voicesByAccent[selectedAccent][fallbackGender][0];
+    } else if (voicesByAccent[selectedAccent].unknown.length > 0) {
+      voiceToUse = voicesByAccent[selectedAccent].unknown[0];
+    }
+  } 
+  // Try fallback to base language code
+  else if (voicesByAccent[baseCode]) {
+    if (voicesByAccent[baseCode][selectedGender].length > 0) {
+      voiceToUse = voicesByAccent[baseCode][selectedGender][0];
+    } else if (voicesByAccent[baseCode][selectedGender === 'male' ? 'female' : 'male'].length > 0) {
+      voiceToUse = voicesByAccent[baseCode][selectedGender === 'male' ? 'female' : 'male'][0];
+    }
+  }
+  
+  if (voiceToUse) {
+    selectedVoiceInfo.innerHTML = `<strong>Currently Selected Voice:</strong><br>
+      Name: ${voiceToUse.name}<br>
+      Language: ${voiceToUse.lang}<br>
+      Default: ${voiceToUse.default ? 'Yes' : 'No'}<br>
+      <strong>UI Settings:</strong><br>
+      Gender: ${selectedGender}<br>
+      Accent: ${selectedAccent}<br>
+      <strong>Gender Match:</strong> ${voiceToUse.name.toLowerCase().includes(selectedGender) ? '✓ Matches' : '✗ Mismatch'}`;
+      
+    // Add a test button
+    const testBtn = document.createElement('button');
+    testBtn.textContent = 'Test This Voice';
+    testBtn.style.marginTop = '10px';
+    testBtn.style.padding = '5px 10px';
+    testBtn.style.backgroundColor = '#9370DB';
+    testBtn.style.color = 'white';
+    testBtn.style.border = 'none';
+    testBtn.style.borderRadius = '4px';
+    testBtn.style.cursor = 'pointer';
+    
+    testBtn.addEventListener('click', () => {
+      const testUtterance = new SpeechSynthesisUtterance('This is a test of the selected voice.');
+      testUtterance.voice = voiceToUse;
+      speechSynthesis.speak(testUtterance);
+    });
+    
+    selectedVoiceInfo.appendChild(document.createElement('br'));
+    selectedVoiceInfo.appendChild(testBtn);
+  } else {
+    selectedVoiceInfo.innerHTML = '<strong>No matching voice found for current settings.</strong>';
+  }
+  
+  modal.appendChild(selectedVoiceInfo);
+  
+  // Add available voices list
+  const voicesList = document.createElement('div');
+  voicesList.innerHTML = '<h3>All Available Voices (' + voices.length + ')</h3>';
+  
+  if (voices && voices.length > 0) {
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    
+    // Add table header
+    const thead = document.createElement('thead');
+    thead.innerHTML = `<tr>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Name</th>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Language</th>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Default</th>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Gender Guess</th>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Test</th>
+    </tr>`;
+    table.appendChild(thead);
+    
+    // Add table body
+    const tbody = document.createElement('tbody');
+    voices.forEach((voice, index) => {
+      const row = document.createElement('tr');
+      row.style.backgroundColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+      
+      // Determine gender based on name
+      let genderGuess = 'unknown';
+      const lowerName = voice.name.toLowerCase();
+      if (lowerName.includes('female') || lowerName.includes('woman') || 
+          lowerName.includes('girl') || lowerName.includes('fiona') || 
+          lowerName.includes('samantha') || lowerName.includes('victoria') ||
+          lowerName.includes('karen') || lowerName.includes('zira')) {
+        genderGuess = 'female';
+      } else if (lowerName.includes('male') || lowerName.includes('man') || 
+                lowerName.includes('guy') || lowerName.includes('david') ||
+                lowerName.includes('james') || lowerName.includes('thomas')) {
+        genderGuess = 'male';
+      }
+      
+      // Create test button for this voice
+      const testVoiceBtn = document.createElement('button');
+      testVoiceBtn.textContent = 'Test';
+      testVoiceBtn.style.padding = '2px 6px';
+      testVoiceBtn.style.backgroundColor = '#9370DB';
+      testVoiceBtn.style.color = 'white';
+      testVoiceBtn.style.border = 'none';
+      testVoiceBtn.style.borderRadius = '3px';
+      testVoiceBtn.style.cursor = 'pointer';
+      
+      testVoiceBtn.addEventListener('click', () => {
+        const testUtterance = new SpeechSynthesisUtterance('Testing voice ' + voice.name);
+        testUtterance.voice = voice;
+        speechSynthesis.speak(testUtterance);
+      });
+      
+      // Create cells
+      row.innerHTML = `
+        <td style="padding:8px;border-bottom:1px solid #ddd;">${voice.name}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;">${voice.lang}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;">${voice.default ? 'Yes' : 'No'}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;">${genderGuess}</td>
+      `;
+      
+      const actionCell = document.createElement('td');
+      actionCell.style.padding = '8px';
+      actionCell.style.borderBottom = '1px solid #ddd';
+      actionCell.appendChild(testVoiceBtn);
+      row.appendChild(actionCell);
+      
+      tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    voicesList.appendChild(table);
+  } else {
+    voicesList.innerHTML += '<p>No voices available.</p>';
+  }
+  
+  modal.appendChild(voicesList);
+  document.body.appendChild(modal);
+}
+
+// Add this function to show what voice is actually being used when speech starts
+function showActiveVoiceInfo() {
+  // Only show this on mobile
+  if (!isMobile) return;
+  
+  // Create an info box
+  const infoBox = document.createElement('div');
+  infoBox.style.position = 'fixed';
+  infoBox.style.bottom = '120px';
+  infoBox.style.right = '20px';
+  infoBox.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  infoBox.style.color = 'white';
+  infoBox.style.padding = '10px';
+  infoBox.style.borderRadius = '5px';
+  infoBox.style.zIndex = '9999';
+  infoBox.style.fontSize = '12px';
+  infoBox.style.maxWidth = '200px';
+  infoBox.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  
+  // Add content
+  if (speech && speech.voice) {
+    infoBox.innerHTML = `
+      <strong>Active Voice:</strong><br>
+      ${speech.voice.name}<br>
+      Lang: ${speech.voice.lang}<br>
+      Rate: ${speech.rate}x
+    `;
+  } else {
+    infoBox.textContent = 'No active voice';
+  }
+  
+  // Add to page
+  document.body.appendChild(infoBox);
+  
+  // Remove after 5 seconds
+  setTimeout(() => {
+    infoBox.style.opacity = '0';
+    infoBox.style.transition = 'opacity 0.5s ease';
+    setTimeout(() => document.body.removeChild(infoBox), 500);
+  }, 5000);
+}
