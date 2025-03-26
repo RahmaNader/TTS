@@ -888,31 +888,31 @@ function updateLanguageOptions(selectedLanguage) {
   }
   
   if (selectedLanguage === 'ar') {
+    // Arabic options only
     const arOptions = [
-      { value: 'ar-SA', label: '🇸🇦', title: 'Saudi Arabic' },
-      { value: 'ar-EG', label: '🇪🇬', title: 'Egyptian Arabic' },
+      { value: 'ar-SA', label: '🇸🇦 Saudi' },
+      { value: 'ar-EG', label: '🇪🇬 Egyptian' },
     ];
     
     arOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
-      opt.title = option.title;
       accentDropdown.appendChild(opt);
     });
     
     accentDropdown.value = 'ar-SA';
   } else {
+    // English options only
     const enOptions = [
-      { value: 'en-US', label: '🇺🇸', title: 'American English' },
-      { value: 'en-GB', label: '🇬🇧', title: 'British English' },
+      { value: 'en-US', label: '🇺🇸 American' },
+      { value: 'en-GB', label: '🇬🇧 British' },
     ];
     
     enOptions.forEach(option => {
       const opt = document.createElement('option');
       opt.value = option.value;
       opt.textContent = option.label;
-      opt.title = option.title;
       accentDropdown.appendChild(opt);
     });
     
