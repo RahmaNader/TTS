@@ -4,19 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TTS Plugin Demo</title>
-  
-  <!-- Favicon links -->
-  <link rel="icon" href="TTSFavicon.svg" type="image/svg+xml">
-  <link rel="shortcut icon" href="TTSFavicon.svg" type="image/svg+xml">
-  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
-  <style>
-    .highlight {
-      background-color: yellow !important;
-    }
-  </style>
 </head>
 <body>
   <!-- Hidden form elements that the script uses -->
@@ -83,11 +72,6 @@
        The content will be highlighted as it's being read.</p>
   </div>
 
-  <div id="textContainer">
-    This is a sample text that will be read aloud and highlighted word by word.
-  </div>
-  <button id="startButton">Start Reading</button>
-
   <script src="script.js"></script>
   <script>
     document.getElementById('ttsToggle').addEventListener('click', () => {
@@ -99,52 +83,6 @@
       document.querySelector('.tts-widget').classList.remove('active');
       document.getElementById('ttsToggle').classList.remove('hidden');
     });
-
-    const textContainer = document.getElementById('textContainer');
-    const startButton = document.getElementById('startButton');
-    const text = textContainer.innerText;
-    const words = text.split(/\s+/);
-    let wordIndex = 0;
-
-    // Wrap each word in a span to enable individual highlighting
-    textContainer.innerHTML = words.map(word => `<span>${word}</span>`).join(' ');
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const synth = window.speechSynthesis;
-
-    utterance.onboundary = (event) => {
-      if (event.name === 'word') {
-        highlightWord(wordIndex);
-        wordIndex++;
-      }
-    };
-
-    utterance.onend = () => {
-      clearHighlight();
-      wordIndex = 0;
-    };
-
-    startButton.addEventListener('click', () => {
-      if (synth.speaking) {
-        synth.cancel();
-      }
-      synth.speak(utterance);
-    });
-
-    function highlightWord(index) {
-      clearHighlight();
-      const wordSpans = textContainer.getElementsByTagName('span');
-      if (wordSpans[index]) {
-        wordSpans[index].classList.add('highlight');
-      }
-    }
-
-    function clearHighlight() {
-      const wordSpans = textContainer.getElementsByTagName('span');
-      for (let span of wordSpans) {
-        span.classList.remove('highlight');
-      }
-    }
   </script>
 </body>
 </html>
